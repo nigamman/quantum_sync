@@ -47,6 +47,39 @@ class GameDataService {
     return prefs.getInt(_currentLevelKey) ?? 1;
   }
 
+  // Get completed levels (levels that have been solved)
+  static Future<List<int>> getCompletedLevels() async {
+    final bestScores = await _getBestScoresList();
+    final completedLevels = <int>[];
+    
+    for (int i = 0; i < bestScores.length; i++) {
+      if (bestScores[i] > 0) {
+        completedLevels.add(i + 1); // Convert to 1-based level numbers
+      }
+    }
+    
+    return completedLevels;
+  }
+
+  // Check if a level is unlocked (can be played)
+  static Future<bool> isLevelUnlocked(int level) async {
+    if (level == 1) return true; // Level 1 is always unlocked
+    
+    final completedLevels = await getCompletedLevels();
+    if (completedLevels.isEmpty) return false; // No levels completed, only level 1 unlocked
+    
+    final maxCompletedLevel = completedLevels.reduce((a, b) => a > b ? a : b);
+    
+    // Level is unlocked if it's the next level after the highest completed level
+    return level == maxCompletedLevel + 1;
+  }
+
+  // Set current level (for level selection)
+  static Future<void> setCurrentLevel(int level) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_currentLevelKey, level);
+  }
+
   // Get best score for specific level
   static Future<int?> getBestScore(int level) async {
     final bestScores = await _getBestScoresList();

@@ -84,8 +84,8 @@ class HintService {
   }
   
   // Find optimal moves using a simplified algorithm
-  static List<GameMove> _findOptimalMoves(List<List<int>> current, List<List<int>> target, int level) {
-    final moves = <GameMove>[];
+  static List<Move> _findOptimalMoves(List<List<int>> current, List<List<int>> target, int level) {
+    final moves = <Move>[];
     final size = current.length;
     
     // Simple heuristic: look for rows/columns that are close to being solved
@@ -98,8 +98,8 @@ class HintService {
       
       if (rowMatches >= size - 1) {
         // Row is almost solved, suggest a rotation
-        moves.add(GameMove(type: MoveType.rowLeft, index: i));
-        moves.add(GameMove(type: MoveType.rowRight, index: i));
+        moves.add(Move(type: MoveType.rowLeft, index: i));
+        moves.add(Move(type: MoveType.rowRight, index: i));
       }
       
       // Check column similarity
@@ -110,8 +110,8 @@ class HintService {
       
       if (colMatches >= size - 1) {
         // Column is almost solved, suggest a rotation
-        moves.add(GameMove(type: MoveType.columnUp, index: i));
-        moves.add(GameMove(type: MoveType.columnDown, index: i));
+        moves.add(Move(type: MoveType.columnUp, index: i));
+        moves.add(Move(type: MoveType.columnDown, index: i));
       }
     }
     
@@ -120,7 +120,7 @@ class HintService {
       final random = Random(level);
       final moveType = MoveType.values[random.nextInt(MoveType.values.length)];
       final index = random.nextInt(size);
-      moves.add(GameMove(type: moveType, index: index));
+      moves.add(Move(type: moveType, index: index));
     }
     
     return moves.take(2).toList(); // Return max 2 suggestions
@@ -145,7 +145,7 @@ class HintStatus {
 class Hint {
   final HintType type;
   final String message;
-  final GameMove? move;
+  final Move? move;
   
   Hint({
     required this.type,
@@ -159,11 +159,11 @@ enum HintType {
   noHint,
 }
 
-class GameMove {
+class Move {
   final MoveType type;
   final int index;
   
-  GameMove({
+  Move({
     required this.type,
     required this.index,
   });

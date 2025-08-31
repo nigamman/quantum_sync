@@ -67,10 +67,11 @@ class _WinDialogState extends State<WinDialog>
 
   void _generateParticles() {
     final random = Random();
+    
     for (int i = 0; i < _particleCount; i++) {
       _particles.add(
         Particle(
-          x: random.nextDouble() * 400,
+          x: random.nextDouble() * 400, // Default values, will be adjusted by ParticlePainter
           y: random.nextDouble() * 600,
           size: random.nextDouble() * 8 + 2,
           color: _getRandomColor(),
@@ -106,36 +107,52 @@ class _WinDialogState extends State<WinDialog>
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.height < 700;
+    
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 20),
+      margin: EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: isSmallScreen ? 4 : 12,
+      ),
+      constraints: BoxConstraints(
+        maxHeight: screenSize.height * 0.75, // Reduced from 0.85
+        maxWidth: screenSize.width * 0.95,
+      ),
       child: Stack(
         children: [
           // Particle Background
           _buildParticleBackground(),
 
           // Main Win Dialog
-          _buildMainDialog(),
+          _buildMainDialog(isSmallScreen),
         ],
       ),
     );
   }
 
   Widget _buildParticleBackground() {
-    return AnimatedBuilder(
-      animation: _particleController,
-      builder: (context, child) {
-        return CustomPaint(
-          painter: ParticlePainter(
-            particles: _particles,
-            animationValue: _particleController.value,
-          ),
-          size: Size(double.infinity, 300),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return AnimatedBuilder(
+          animation: _particleController,
+          builder: (context, child) {
+            return CustomPaint(
+              painter: ParticlePainter(
+                particles: _particles,
+                animationValue: _particleController.value,
+                maxX: constraints.maxWidth,
+                maxY: constraints.maxHeight * 0.5, // Reduced from 0.6
+              ),
+              size: Size(constraints.maxWidth, constraints.maxHeight * 0.5),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildMainDialog() {
+  Widget _buildMainDialog(bool isSmallScreen) {
     return AnimatedBuilder(
       animation: _textController,
       builder: (context, child) {
@@ -144,7 +161,7 @@ class _WinDialogState extends State<WinDialog>
           child: Transform.scale(
             scale: _scaleAnimation.value,
             child: Container(
-              padding: EdgeInsets.all(24),
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 16), // Reduced padding
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -173,33 +190,43 @@ class _WinDialogState extends State<WinDialog>
                   ),
                 ],
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Victory Icon
-                  _buildVictoryIcon(),
+              child: SingleChildScrollView(
+                physics: BouncingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: 150, // Reduced from 200
+                  ),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Victory Icon
+                        _buildVictoryIcon(isSmallScreen),
 
-                  SizedBox(height: 16),
+                        SizedBox(height: isSmallScreen ? 6 : 8), // Reduced spacing
 
-                  // Victory Title
-                  _buildVictoryTitle(),
+                        // Victory Title
+                        _buildVictoryTitle(isSmallScreen),
 
-                  SizedBox(height: 8),
+                        SizedBox(height: isSmallScreen ? 3 : 4), // Reduced spacing
 
-                  // Stats
-                  _buildStats(),
+                        // Stats
+                        _buildStats(isSmallScreen),
 
-                  SizedBox(height: 16),
+                        SizedBox(height: isSmallScreen ? 6 : 8), // Reduced spacing
 
-                  // Achievements
-                  if (widget.achievements?.isNotEmpty ?? false)
-                    _buildAchievements(),
+                        // Achievements
+                        if (widget.achievements?.isNotEmpty ?? false)
+                          _buildAchievements(isSmallScreen),
 
-                  SizedBox(height: 20),
+                        SizedBox(height: isSmallScreen ? 8 : 10), // Reduced spacing
 
-                  // Action Buttons
-                  _buildActionButtons(),
-                ],
+                        // Action Buttons
+                        _buildActionButtons(isSmallScreen),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -208,7 +235,7 @@ class _WinDialogState extends State<WinDialog>
     );
   }
 
-  Widget _buildVictoryIcon() {
+  Widget _buildVictoryIcon(bool isSmallScreen) {
     return AnimatedBuilder(
       animation: widget.animationController,
       builder: (context, child) {
@@ -217,8 +244,8 @@ class _WinDialogState extends State<WinDialog>
           child: Transform.scale(
             scale: 1.0 + (widget.animationController.value * 0.2),
             child: Container(
-              width: 80,
-              height: 80,
+              width: isSmallScreen ? 40 : 50, // Further reduced
+              height: isSmallScreen ? 40 : 50, // Further reduced
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
@@ -238,7 +265,7 @@ class _WinDialogState extends State<WinDialog>
               child: Icon(
                 _getVictoryIcon(),
                 color: Colors.white,
-                size: 40,
+                size: isSmallScreen ? 20 : 25, // Further reduced
               ),
             ),
           ),
@@ -255,7 +282,7 @@ class _WinDialogState extends State<WinDialog>
     return Icons.celebration; // Party
   }
 
-  Widget _buildVictoryTitle() {
+  Widget _buildVictoryTitle(bool isSmallScreen) {
     String title = _getVictoryTitle();
     String subtitle = _getVictorySubtitle();
 
@@ -268,19 +295,19 @@ class _WinDialogState extends State<WinDialog>
           child: Text(
             title,
             style: TextStyle(
-              fontSize: 24,
+              fontSize: isSmallScreen ? 16 : 18, // Further reduced
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
             textAlign: TextAlign.center,
           ),
         ),
-        SizedBox(height: 4),
+        SizedBox(height: isSmallScreen ? 1 : 2), // Further reduced
         Text(
           subtitle,
           style: TextStyle(
             color: Colors.white70,
-            fontSize: 14,
+            fontSize: isSmallScreen ? 9 : 10, // Further reduced
           ),
           textAlign: TextAlign.center,
         ),
@@ -305,9 +332,9 @@ class _WinDialogState extends State<WinDialog>
     return 'Quantum patterns aligned perfectly!';
   }
 
-  Widget _buildStats() {
+  Widget _buildStats(bool isSmallScreen) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(isSmallScreen ? 8 : 10), // Further reduced
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
@@ -321,12 +348,14 @@ class _WinDialogState extends State<WinDialog>
             label: 'Moves',
             value: widget.moves.toString(),
             color: widget.isNewBest ? AppTheme.accentGreen : Colors.white,
+            isSmallScreen: isSmallScreen,
           ),
           _buildStatItem(
             icon: Icons.flash_on,
             label: 'Level',
             value: widget.level.toString(),
             color: AppTheme.primaryPurple,
+            isSmallScreen: isSmallScreen,
           ),
           if (widget.isNewBest)
             _buildStatItem(
@@ -334,6 +363,7 @@ class _WinDialogState extends State<WinDialog>
               label: 'New Best!',
               value: '🎉',
               color: AppTheme.accentGreen,
+              isSmallScreen: isSmallScreen,
             ),
         ],
       ),
@@ -345,16 +375,17 @@ class _WinDialogState extends State<WinDialog>
     required String label,
     required String value,
     required Color color,
+    required bool isSmallScreen,
   }) {
     return Column(
       children: [
-        Icon(icon, color: color, size: 20),
-        SizedBox(height: 4),
+        Icon(icon, color: color, size: isSmallScreen ? 14 : 16), // Further reduced
+        SizedBox(height: isSmallScreen ? 1 : 2), // Further reduced
         Text(
           value,
           style: TextStyle(
             color: color,
-            fontSize: 18,
+            fontSize: isSmallScreen ? 12 : 14, // Further reduced
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -362,16 +393,16 @@ class _WinDialogState extends State<WinDialog>
           label,
           style: TextStyle(
             color: Colors.white60,
-            fontSize: 11,
+            fontSize: isSmallScreen ? 8 : 9, // Further reduced
           ),
         ),
       ],
     );
   }
 
-  Widget _buildAchievements() {
+  Widget _buildAchievements(bool isSmallScreen) {
     return Container(
-      padding: EdgeInsets.all(12),
+      padding: EdgeInsets.all(isSmallScreen ? 6 : 8), // Further reduced
       decoration: BoxDecoration(
         color: Colors.amber.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -383,19 +414,19 @@ class _WinDialogState extends State<WinDialog>
             '🎖️ NEW ACHIEVEMENTS!',
             style: TextStyle(
               color: Colors.amber,
-              fontSize: 14,
+              fontSize: isSmallScreen ? 11 : 12, // Further reduced
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 8),
+          SizedBox(height: isSmallScreen ? 3 : 4), // Further reduced
           ...widget.achievements!.take(3).map((achievement) =>
               Padding(
-                padding: EdgeInsets.symmetric(vertical: 2),
+                padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 0.5 : 1), // Further reduced
                 child: Text(
                   achievement,
                   style: TextStyle(
                     color: Colors.white70,
-                    fontSize: 12,
+                    fontSize: isSmallScreen ? 9 : 10, // Further reduced
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -406,7 +437,7 @@ class _WinDialogState extends State<WinDialog>
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(bool isSmallScreen) {
     return Column(
       children: [
         // Next Level Button
@@ -417,7 +448,7 @@ class _WinDialogState extends State<WinDialog>
               onPressed: widget.onNextLevel,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryPurple,
-                padding: EdgeInsets.symmetric(vertical: 16),
+                padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12), // Further reduced
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -427,12 +458,12 @@ class _WinDialogState extends State<WinDialog>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.arrow_forward, size: 20),
-                  SizedBox(width: 8),
+                  Icon(Icons.arrow_forward, size: isSmallScreen ? 14 : 16), // Further reduced
+                  SizedBox(width: isSmallScreen ? 4 : 6), // Further reduced
                   Text(
                     'NEXT DIMENSION',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: isSmallScreen ? 13 : 14, // Further reduced
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -443,7 +474,7 @@ class _WinDialogState extends State<WinDialog>
         else
         // Game Complete Message
           Container(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 8 : 10), // Further reduced
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [Colors.amber, Colors.orange],
@@ -456,16 +487,16 @@ class _WinDialogState extends State<WinDialog>
                   '👑 QUANTUM MASTER 👑',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
+                    fontSize: isSmallScreen ? 14 : 15, // Further reduced
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: isSmallScreen ? 1 : 2), // Further reduced
                 Text(
                   'You have conquered all 100 levels!\nYou are truly one in a million!',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 12,
+                    fontSize: isSmallScreen ? 9 : 10, // Further reduced
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -473,7 +504,7 @@ class _WinDialogState extends State<WinDialog>
             ),
           ),
 
-        SizedBox(height: 12),
+        SizedBox(height: isSmallScreen ? 6 : 8), // Reduced from 12
 
         // Secondary Actions
         Row(
@@ -484,15 +515,20 @@ class _WinDialogState extends State<WinDialog>
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white70,
                   side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 6 : 8), // Further reduced
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: Text('MENU'),
+                child: Text(
+                  'MENU',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 13, // Added font size control
+                  ),
+                ),
               ),
             ),
-            SizedBox(width: 12),
+            SizedBox(width: isSmallScreen ? 6 : 8), // Further reduced
             Expanded(
               child: OutlinedButton(
                 onPressed: () {
@@ -502,12 +538,17 @@ class _WinDialogState extends State<WinDialog>
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.primaryPink,
                   side: BorderSide(color: AppTheme.primaryPink.withOpacity(0.5)),
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 6 : 8), // Further reduced
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: Text('SHARE'),
+                child: Text(
+                  'SHARE',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 13, // Added font size control
+                  ),
+                ),
               ),
             ),
           ],
@@ -567,24 +608,28 @@ class Particle {
     required this.angle,
   });
 
-  void update(double animationValue) {
+  void update(double animationValue, {double maxX = 400, double maxY = 600}) {
     x += cos(angle) * velocity;
     y += sin(angle) * velocity + (animationValue * 2); // Gravity effect
 
     // Wrap around screen
-    if (x < 0) x = 400;
-    if (x > 400) x = 0;
-    if (y > 600) y = -10;
+    if (x < 0) x = maxX;
+    if (x > maxX) x = 0;
+    if (y > maxY) y = -10;
   }
 }
 
 class ParticlePainter extends CustomPainter {
   final List<Particle> particles;
   final double animationValue;
+  final double maxX;
+  final double maxY;
 
   ParticlePainter({
     required this.particles,
     required this.animationValue,
+    required this.maxX,
+    required this.maxY,
   });
 
   @override
@@ -592,7 +637,7 @@ class ParticlePainter extends CustomPainter {
     final paint = Paint();
 
     for (final particle in particles) {
-      particle.update(animationValue);
+      particle.update(animationValue, maxX: maxX, maxY: maxY);
 
       paint.color = particle.color.withOpacity(0.7);
 

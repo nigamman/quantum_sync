@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/hint_service.dart';
+import '../services/ad_service.dart';
 import '../utils/app_theme.dart';
 
 class HintDialog extends StatefulWidget {
@@ -117,10 +118,10 @@ class _HintDialogState extends State<HintDialog>
                   children: [
                     // Header
                     _buildHeader(),
-                    
+
                     // Content
                     _buildContent(),
-                    
+
                     // Action Buttons
                     _buildActions(),
                   ],
@@ -173,6 +174,7 @@ class _HintDialogState extends State<HintDialog>
                     color: Colors.white,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.none, // Remove underline
                   ),
                 ),
                 SizedBox(height: 4),
@@ -181,6 +183,7 @@ class _HintDialogState extends State<HintDialog>
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: 14,
+                    decoration: TextDecoration.none, // Remove underline
                   ),
                 ),
               ],
@@ -206,9 +209,15 @@ class _HintDialogState extends State<HintDialog>
         children: [
           // Free Hints Status
           _buildHintStatus(),
-          
+
           SizedBox(height: 24),
-          
+
+          // Ad Status (only show when no free hints)
+          if (!widget.hintStatus.hasFreeHints) ...[
+            _buildAdStatus(),
+            SizedBox(height: 24),
+          ],
+
           // Daily Reset Info
           _buildResetInfo(),
         ],
@@ -264,6 +273,7 @@ class _HintDialogState extends State<HintDialog>
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.none, // Remove underline
                   ),
                 ),
                 SizedBox(height: 4),
@@ -274,9 +284,44 @@ class _HintDialogState extends State<HintDialog>
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: 14,
+                    decoration: TextDecoration.none, // Remove underline
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdStatus() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.purple.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.purple.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.ads_click,
+            color: Colors.purple,
+            size: 20,
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              AdService.isAdReady ? 'Ad Available' : 'Ad Not Available',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                decoration: TextDecoration.none, // Remove underline
+              ),
             ),
           ),
         ],
@@ -309,6 +354,7 @@ class _HintDialogState extends State<HintDialog>
               style: TextStyle(
                 color: Colors.white70,
                 fontSize: 14,
+                decoration: TextDecoration.none, // Remove underline
               ),
             ),
           ),
@@ -316,8 +362,6 @@ class _HintDialogState extends State<HintDialog>
       ),
     );
   }
-
-
 
   Widget _buildActions() {
     return Container(
@@ -336,78 +380,96 @@ class _HintDialogState extends State<HintDialog>
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Text('CANCEL'),
+              child: Text(
+                'CANCEL',
+                style: TextStyle(
+                  decoration: TextDecoration.none, // Remove underline
+                ),
+              ),
             ),
           ),
-          
+
           SizedBox(width: 16),
-          
+
           // Action Button
           Expanded(
             flex: 2,
             child: widget.isLoading
                 ? Container(
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryPurple.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      ),
-                    ),
-                  )
+              height: 52,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryPurple.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+              ),
+            )
                 : ElevatedButton(
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      if (widget.hintStatus.hasFreeHints) {
-                        widget.onUseFreeHint();
-                      } else {
-                        widget.onShowAd();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.hintStatus.hasFreeHints
-                          ? AppTheme.primaryPurple
-                          : Colors.orange,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                if (widget.hintStatus.hasFreeHints) {
+                  widget.onUseFreeHint();
+                } else {
+                  // Check if ad is available before showing
+                  if (AdService.isAdReady) {
+                    widget.onShowAd();
+                  } else {
+                    // Show message that ad is not available
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Ad not available. Please try again later.'),
+                        backgroundColor: Colors.orange,
+                        duration: Duration(seconds: 2),
                       ),
-                      elevation: 4,
-                      shadowColor: (widget.hintStatus.hasFreeHints
-                              ? AppTheme.primaryPurple
-                              : Colors.orange)
-                          .withOpacity(0.3),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          widget.hintStatus.hasFreeHints
-                              ? Icons.lightbulb
-                              : Icons.play_arrow,
-                          size: 20,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          widget.hintStatus.hasFreeHints
-                              ? 'USE FREE HINT'
-                              : 'WATCH AD',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: widget.hintStatus.hasFreeHints
+                    ? AppTheme.primaryPurple
+                    : (AdService.isAdReady ? Colors.orange : Colors.grey),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 4,
+                shadowColor: (widget.hintStatus.hasFreeHints
+                    ? AppTheme.primaryPurple
+                    : (AdService.isAdReady ? Colors.orange : Colors.grey))
+                    .withOpacity(0.3),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    widget.hintStatus.hasFreeHints
+                        ? Icons.lightbulb
+                        : (AdService.isAdReady ? Icons.play_arrow : Icons.error),
+                    size: 20,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    widget.hintStatus.hasFreeHints
+                        ? 'USE FREE HINT'
+                        : (AdService.isAdReady ? 'WATCH AD' : 'AD UNAVAILABLE'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.none, // Remove underline
                     ),
                   ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

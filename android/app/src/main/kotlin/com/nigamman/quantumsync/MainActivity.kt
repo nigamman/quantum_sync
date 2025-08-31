@@ -1,4 +1,4 @@
-package com.example.quantum_sync
+package com.nigamman.quantumsync
 
 import io.flutter.embedding.android.FlutterActivity
 

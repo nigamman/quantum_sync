@@ -4,12 +4,17 @@
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
-        android:label="quantum_sync"
+        android:label="Quantum Sync"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/LaunchTheme"
         android:exported="true"
-        android:usesCleartextTraffic="false">
+        android:usesCleartextTraffic="true">
+
+        <!-- AdMob App ID - Replace with your actual AdMob App ID in production -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
 
         <activity
             android:name=".MainActivity"

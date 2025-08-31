@@ -3,15 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/hint_service.dart';
 import '../utils/app_theme.dart';
+import 'animated_hint_preview.dart';
 
 class HintResultDialog extends StatefulWidget {
   final Hint hint;
   final VoidCallback onClose;
+  final List<List<int>> currentGrid;
 
   const HintResultDialog({
     Key? key,
     required this.hint,
     required this.onClose,
+    required this.currentGrid,
   }) : super(key: key);
 
   @override
@@ -75,69 +78,99 @@ class _HintResultDialogState extends State<HintResultDialog>
     super.dispose();
   }
 
+  void _handleCloseDialog() {
+    HapticFeedback.lightImpact();
+
+    // First call the parent's onClose callback
+    widget.onClose();
+
+    // Then ensure the dialog is dismissed from navigation stack
+    if (Navigator.canPop(context)) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return BackdropFilter(
-          filter: ColorFilter.mode(
-            Colors.black.withOpacity(0.8 * _fadeAnimation.value),
-            BlendMode.srcOver,
-          ),
-          child: Center(
-            child: Transform.scale(
-              scale: _scaleAnimation.value,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Container(
-                  margin: EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.grey[900]!,
-                        Colors.grey[800]!,
+    return WillPopScope(
+      onWillPop: () async {
+        _handleCloseDialog();
+        return false; // We handle the pop ourselves
+      },
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return BackdropFilter(
+            filter: ColorFilter.mode(
+              Colors.black.withOpacity(0.8 * _fadeAnimation.value),
+              BlendMode.srcOver,
+            ),
+            child: Center(
+              child: Transform.scale(
+                scale: _scaleAnimation.value,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Container(
+                    margin: EdgeInsets.all(24),
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.8,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.grey[900]!,
+                          Colors.grey[800]!,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppTheme.primaryPurple.withOpacity(0.4),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryPurple.withOpacity(0.3),
+                          blurRadius: 30,
+                          spreadRadius: 5,
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 40,
+                          offset: Offset(0, 15),
+                        ),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: AppTheme.primaryPurple.withOpacity(0.4),
-                      width: 2,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Header
+                        _buildHeader(),
+
+                        // Scrollable content
+                        Flexible(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                // Hint Content
+                                _buildHintContent(),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Action Button
+                        _buildActionButton(),
+                      ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryPurple.withOpacity(0.3),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.5),
-                        blurRadius: 40,
-                        offset: Offset(0, 15),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Header
-                      _buildHeader(),
-                      
-                      // Hint Content
-                      _buildHintContent(),
-                      
-                      // Action Button
-                      _buildActionButton(),
-                    ],
                   ),
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -196,6 +229,7 @@ class _HintResultDialogState extends State<HintResultDialog>
                     color: Colors.white,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.none, // Remove underline
                   ),
                 ),
                 SizedBox(height: 4),
@@ -204,10 +238,21 @@ class _HintResultDialogState extends State<HintResultDialog>
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: 14,
+                    decoration: TextDecoration.none, // Remove underline
                   ),
                 ),
               ],
             ),
+          ),
+          // Add close button in header
+          IconButton(
+            onPressed: _handleCloseDialog,
+            icon: Icon(
+              Icons.close,
+              color: Colors.white70,
+              size: 24,
+            ),
+            splashRadius: 20,
           ),
         ],
       ),
@@ -231,6 +276,7 @@ class _HintResultDialogState extends State<HintResultDialog>
               ),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: EdgeInsets.all(8),
@@ -253,20 +299,21 @@ class _HintResultDialogState extends State<HintResultDialog>
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       height: 1.4,
+                      decoration: TextDecoration.none, // Remove underline
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          
+
           SizedBox(height: 24),
-          
+
           // Visual Hint
           if (widget.hint.move != null) _buildVisualHint(),
-          
+
           SizedBox(height: 24),
-          
+
           // Tips
           _buildTips(),
         ],
@@ -276,198 +323,9 @@ class _HintResultDialogState extends State<HintResultDialog>
 
   Widget _buildVisualHint() {
     final move = widget.hint.move!;
-    IconData arrowIcon;
-    String direction;
-    Color arrowColor;
-    
-    switch (move.type) {
-      case MoveType.rowLeft:
-        arrowIcon = Icons.arrow_back_ios;
-        direction = 'LEFT';
-        arrowColor = Colors.blue;
-        break;
-      case MoveType.rowRight:
-        arrowIcon = Icons.arrow_forward_ios;
-        direction = 'RIGHT';
-        arrowColor = Colors.green;
-        break;
-      case MoveType.columnUp:
-        arrowIcon = Icons.keyboard_arrow_up;
-        direction = 'UP';
-        arrowColor = Colors.orange;
-        break;
-      case MoveType.columnDown:
-        arrowIcon = Icons.keyboard_arrow_down;
-        direction = 'DOWN';
-        arrowColor = Colors.purple;
-        break;
-    }
-    
-    return Container(
-      padding: EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            arrowColor.withOpacity(0.15),
-            arrowColor.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: arrowColor.withOpacity(0.3),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: arrowColor.withOpacity(0.1),
-            blurRadius: 10,
-            spreadRadius: 0,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Modern header with icon
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: arrowColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.touch_app,
-                  color: arrowColor,
-                  size: 20,
-                ),
-              ),
-              SizedBox(width: 12),
-              Text(
-                'Visual Guide',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          
-          SizedBox(height: 20),
-          
-          // Modern action display
-          Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.1),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Action type
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        arrowColor.withOpacity(0.3),
-                        arrowColor.withOpacity(0.1),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: arrowColor.withOpacity(0.4),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    move.type.toString().contains('row') 
-                        ? 'ROW ${move.index + 1}'
-                        : 'COL ${move.index + 1}',
-                    style: TextStyle(
-                      color: arrowColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-                
-                SizedBox(width: 20),
-                
-                // Arrow with glow effect
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        arrowColor.withOpacity(0.3),
-                        arrowColor.withOpacity(0.1),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: arrowColor.withOpacity(0.4),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: arrowColor.withOpacity(0.3),
-                        blurRadius: 8,
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    arrowIcon,
-                    color: arrowColor,
-                    size: 28,
-                  ),
-                ),
-                
-                SizedBox(width: 20),
-                
-                // Direction
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        arrowColor.withOpacity(0.3),
-                        arrowColor.withOpacity(0.1),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: arrowColor.withOpacity(0.4),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    direction,
-                    style: TextStyle(
-                      color: arrowColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return AnimatedHintPreview(
+      currentGrid: widget.currentGrid,
+      move: move,
     );
   }
 
@@ -483,6 +341,7 @@ class _HintResultDialogState extends State<HintResultDialog>
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             Icons.tips_and_updates,
@@ -497,6 +356,7 @@ class _HintResultDialogState extends State<HintResultDialog>
                 color: Colors.white70,
                 fontSize: 14,
                 height: 1.4,
+                decoration: TextDecoration.none, // Remove underline
               ),
             ),
           ),
@@ -511,10 +371,7 @@ class _HintResultDialogState extends State<HintResultDialog>
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton(
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            widget.onClose();
-          },
+          onPressed: _handleCloseDialog,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.primaryPurple,
             foregroundColor: Colors.white,
@@ -535,6 +392,7 @@ class _HintResultDialogState extends State<HintResultDialog>
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
+                  decoration: TextDecoration.none, // Remove underline
                 ),
               ),
             ],

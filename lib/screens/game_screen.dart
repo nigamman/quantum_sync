@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../models/game_state.dart';
 import '../services/game_logic_service.dart';
 import '../services/game_data_service.dart';
+import '../services/ad_service.dart';
 import '../widgets/game_header.dart';
 import '../widgets/stats_card.dart';
 import '../widgets/game_grid.dart';
@@ -34,6 +35,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     super.initState();
     _setupAnimations();
     _initializeGame();
+    _initializeAds();
   }
 
   void _setupAnimations() {
@@ -64,11 +66,20 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     });
   }
 
+  Future<void> _initializeAds() async {
+    // Initialize AdMob
+    await AdService.initialize();
+    
+    // Preload a rewarded ad for hints
+    AdService.loadRewardedAd();
+  }
+
   @override
   void dispose() {
     _celebrationController.dispose();
     _gridController.dispose();
     _buttonController.dispose();
+    AdService.dispose();
     super.dispose();
   }
 
@@ -213,25 +224,65 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     });
     
     try {
-      // TODO: Implement actual ad integration here
-      // For now, simulate ad completion
-      await Future.delayed(Duration(seconds: 2));
+      // Load ad if not ready
+      if (!AdService.isAdReady) {
+        final adLoaded = await AdService.loadRewardedAd();
+        if (!adLoaded) {
+          // Show error message if ad fails to load
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ad not available. Please try again later.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() {
+            _isLoadingHint = false;
+          });
+          return;
+        }
+      }
       
-      // Generate and show hint after ad
-      final hint = HintService.generateHint(
-        gameState.grid,
-        gameState.targetPattern,
-        gameState.currentLevel,
-      );
+      // Show the rewarded ad
+      final adCompleted = await AdService.showRewardedAd();
       
-      setState(() {
-        _isLoadingHint = false;
-      });
-      
-      // Show hint result
-      _showHintResult(hint);
+      if (adCompleted) {
+        // Generate and show hint after successful ad completion
+        final hint = HintService.generateHint(
+          gameState.grid,
+          gameState.targetPattern,
+          gameState.currentLevel,
+        );
+        
+        setState(() {
+          _isLoadingHint = false;
+        });
+        
+        // Show hint result
+        _showHintResult(hint);
+        
+        // Preload next ad
+        AdService.loadRewardedAd();
+      } else {
+        // Ad was not completed
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please watch the full ad to get a hint.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        setState(() {
+          _isLoadingHint = false;
+        });
+      }
       
     } catch (e) {
+      print('Error showing ad for hint: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load ad. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       setState(() {
         _isLoadingHint = false;
       });
@@ -244,6 +295,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       barrierDismissible: false,
       builder: (context) => HintResultDialog(
         hint: hint,
+        currentGrid: gameState.grid, // Pass the current game grid
         onClose: () => Navigator.of(context).pop(),
       ),
     );
@@ -251,13 +303,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    // Remove null check since gameState is late and non-nullable
-
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(gradient: AppTheme.primaryGradient),
         child: SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: EdgeInsets.all(16.0),
             child: Column(
               children: [
@@ -315,7 +365,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   buttonAnimationController: _buttonController,
                 ),
 
-                Spacer(),
+                SizedBox(height: 24), // Replace Spacer() with fixed spacing
 
                 // Win Dialog
                 if (gameState.isComplete)
@@ -342,6 +392,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   currentLevel: gameState.currentLevel,
                   maxLevel: 100,
                 ),
+
+                SizedBox(height: 16), // Add bottom padding
               ],
             ),
           ),
