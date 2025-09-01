@@ -10,7 +10,7 @@ class AdService {
   // Test Ad Unit IDs - Replace with your actual AdMob IDs in production
   static const String _rewardedAdUnitId = kDebugMode
       ? 'ca-app-pub-3940256099942544/5224354917' // Test ID
-      : 'ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX'; // Your production ID
+      : 'ca-app-pub-9870244315079084/6598222348'; // Your production ID
 
   // Initialize AdMob
   static Future<void> initialize() async {
